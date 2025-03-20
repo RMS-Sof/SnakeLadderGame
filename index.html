@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Snakes and Ladders</title>
+    <h1> Snake & Ladder - By Prof. Rahul M. Samant</h1>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        #gameBoard {
+            width: 600px;
+            height: 600px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            background: #fff;
+            border: 3px solid #333;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .cell {
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .player {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.7s ease;
+            z-index: 10;
+        }
+
+        #player1 { background: #ff4444; }
+        #player2 { background: #4444ff; }
+
+        .snake {
+            position: absolute;
+            background: linear-gradient(45deg, #ff0000, #ff6666);
+            opacity: 0.8;
+            border-radius: 5px;
+            z-index: 5;
+            transform-origin: top left;
+        }
+
+        .ladder {
+            position: absolute;
+            background: linear-gradient(45deg, #00ff00, #66ff66);
+            opacity: 0.8;
+            border-radius: 5px;
+            z-index: 5;
+            transform-origin: bottom left;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        #dice {
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border: 3px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        @keyframes snakeBite {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.3) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes ladderClimb {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="gameBoard"></div>
+        <div class="controls">
+            <button onclick="rollDice()">Roll Dice</button>
+            <div id="dice">1</div>
+            <div id="status">Your turn!</div>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('gameBoard');
+        const dice = document.getElementById('dice');
+        const status = document.getElementById('status');
+        
+        let player1Pos = 1;
+        let player2Pos = 1;
+        let currentPlayer = 1;
+
+        const snakes = {
+            16: 6,
+            47: 26,
+            49: 11,
+            56: 53,
+            62: 19,
+            64: 60,
+            87: 24,
+            93: 73,
+            95: 75,
+            98: 78
+        };
+
+        const ladders = {
+            1: 38,
+            4: 14,
+            9: 31,
+            21: 42,
+            28: 84,
+            36: 44,
+            51: 67,
+            71: 91,
+            80: 100
+        };
+
+        // Create board
+        for (let i = 100; i >= 1; i--) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.textContent = i;
+            board.appendChild(cell);
+        }
+
+        // Create players
+        const player1 = document.createElement('div');
+        player1.id = 'player1';
+        player1.className = 'player';
+        board.appendChild(player1);
+
+        const player2 = document.createElement('div');
+        player2.id = 'player2';
+        player2.className = 'player';
+        board.appendChild(player2);
+
+        function getPosition(pos) {
+            const row = Math.floor((100 - pos) / 10);
+            const col = (pos - 1) % 10;
+            const x = col * 60 + 17.5;
+            const y = row * 60 + 17.5;
+            return { x, y };
+        }
+
+        function createSnakesAndLadders() {
+            for (let start in snakes) {
+                const snake = document.createElement('div');
+                snake.className = 'snake';
+                const startPos = getPosition(start);
+                const endPos = getPosition(snakes[start]);
+                
+                const dx = endPos.x - startPos.x;
+                const dy = endPos.y - startPos.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const isStraight = Math.random() < 0.3; // 30% chance of being straight
+                
+                if (isStraight && dx === 0) { // Vertical straight
+                    snake.style.width = '8px';
+                    snake.style.height = `${Math.abs(dy)}px`;
+                    snake.style.left = `${startPos.x}px`;
+                    snake.style.top = `${Math.min(startPos.y, endPos.y)}px`;
+                    snake.style.transform = 'rotate(0deg)';
+                } else if (isStraight && dy === 0) { // Horizontal straight
+                    snake.style.width = `${Math.abs(dx)}px`;
+                    snake.style.height = '8px';
+                    snake.style.left = `${Math.min(startPos.x, endPos.x)}px`;
+                    snake.style.top = `${startPos.y}px`;
+                    snake.style.transform = 'rotate(0deg)';
+                } else { // Diagonal
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    snake.style.width = `${length}px`;
+                    snake.style.height = '8px';
+                    snake.style.left = `${startPos.x}px`;
+                    snake.style.top = `${startPos.y}px`;
+                    snake.style.transform = `rotate(${angle}deg)`;
+                }
+                board.appendChild(snake);
+            }
+
+            for (let start in ladders) {
+                const ladder = document.createElement('div');
+                ladder.className = 'ladder';
+                const startPos = getPosition(start);
+                const endPos = getPosition(ladders[start]);
+                
+                const dx = endPos.x - startPos.x;
+                const dy = endPos.y - startPos.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const isStraight = Math.random() < 0.3; // 30% chance of being straight
+                
+                if (isStraight && dx === 0) { // Vertical straight
+                    ladder.style.width = '8px';
+                    ladder.style.height = `${Math.abs(dy)}px`;
+                    ladder.style.left = `${startPos.x}px`;
+                    ladder.style.top = `${Math.min(startPos.y, endPos.y)}px`;
+                    ladder.style.transform = 'rotate(0deg)';
+                } else if (isStraight && dy === 0) { // Horizontal straight
+                    ladder.style.width = `${Math.abs(dx)}px`;
+                    ladder.style.height = '8px';
+                    ladder.style.left = `${Math.min(startPos.x, endPos.x)}px`;
+                    ladder.style.top = `${startPos.y}px`;
+                    ladder.style.transform = 'rotate(0deg)';
+                } else { // Diagonal
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    ladder.style.width = `${length}px`;
+                    ladder.style.height = '8px';
+                    ladder.style.left = `${startPos.x}px`;
+                    ladder.style.top = `${startPos.y}px`;
+                    ladder.style.transform = `rotate(${angle}deg)`;
+                }
+                board.appendChild(ladder);
+            }
+        }
+
+        function updatePlayerPosition(player, pos) {
+            const { x, y } = getPosition(pos);
+            player.style.left = `${x}px`;
+            player.style.top = `${y}px`;
+        }
+
+        function rollDice() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            dice.textContent = roll;
+            
+            if (currentPlayer === 1) {
+                movePlayer(player1, 'player1', roll);
+                status.textContent = "AI's turn!";
+                setTimeout(() => aiTurn(), 1000);
+            } else {
+                movePlayer(player2, 'player2', roll);
+                status.textContent = "Your turn!";
+            }
+            
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+        }
+
+        function aiTurn() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            dice.textContent = roll;
+            movePlayer(player2, 'player2', roll);
+            status.textContent = "Your turn!";
+        }
+
+        function movePlayer(player, playerId, roll) {
+            let currentPos = playerId === 'player1' ? player1Pos : player2Pos;
+            let newPos = currentPos + roll;
+
+            if (newPos <= 100) {
+                if (playerId === 'player1') player1Pos = newPos;
+                else player2Pos = newPos;
+
+                updatePlayerPosition(player, newPos);
+
+                if (snakes[newPos]) {
+                    player.style.animation = 'snakeBite 0.7s';
+                    setTimeout(() => {
+                        if (playerId === 'player1') player1Pos = snakes[newPos];
+                        else player2Pos = snakes[newPos];
+                        updatePlayerPosition(player, snakes[newPos]);
+                        player.style.animation = 'none';
+                        status.textContent = `${playerId === 'player1' ? 'You' : 'AI'} got bitten by a snake!`;
+                    }, 700);
+                }
+                else if (ladders[newPos]) {
+                    player.style.animation = 'ladderClimb 0.7s';
+                    setTimeout(() => {
+                        if (playerId === 'player1') player1Pos = ladders[newPos];
+                        else player2Pos = ladders[newPos];
+                        updatePlayerPosition(player, ladders[newPos]);
+                        player.style.animation = 'none';
+                        status.textContent = `${playerId === 'player1' ? 'You' : 'AI'} climbed a ladder!`;
+                    }, 700);
+                }
+
+                if (newPos === 100) {
+                    status.textContent = `${playerId === 'player1' ? 'You' : 'AI'} won!`;
+                    setTimeout(() => location.reload(), 2000);
+                }
+            }
+        }
+
+        // Initial setup
+        updatePlayerPosition(player1, player1Pos);
+        updatePlayerPosition(player2, player2Pos);
+        createSnakesAndLadders();
+    </script>
+</body>
+</html>
